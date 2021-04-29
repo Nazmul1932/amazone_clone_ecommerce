@@ -5,7 +5,7 @@ from ecommerce_app.models import *
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.files.storage import FileSystemStorage
 from django.contrib.messages.views import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.db.models import Q
 
 
@@ -198,4 +198,62 @@ class ProductCreateView(View):
             sub_category = SubCategories.objects.filter(is_active=1, category_id=category.id)
             categories_list.append({"category": category, "sub_category": sub_category})
         merchant_users = MerchantUser.objects.filter(auth_user_id__is_active=True)
-        return render(request, "admin/product_create.html", {"categories": categories_list, "merchant_users": merchant_users})
+        return render(request, "admin/product_create.html",
+                      {"categories": categories_list, "merchant_users": merchant_users})
+
+    def post(self, request, *args, **kwargs):
+        product_name = request.POST.get("product_name")
+        brand = request.POST.get("brand")
+        url_slug = request.POST.get("url_slug")
+        sub_category = request.POST.get("sub_category")
+        product_max_price = request.POST.get("product_max_price")
+        product_discount_price = request.POST.get("product_discount_price")
+        product_description = request.POST.get("product_description")
+        added_by_merchant = request.POST.get("added_by_merchant")
+        in_stock_total = request.POST.get("in_stock_total")
+        media_type_list = request.POST.getlist("media_type[]")
+        media_content_list = request.FILES.getlist("media_content[]")
+        title_title_list = request.POST.getlist("title_title[]")
+        title_details_list = request.POST.getlist("title_details[]")
+        about_title_list = request.POST.getlist("about_title[]")
+        product_tags = request.POST.get("product_tags")
+        long_desc = request.POST.get("long_desc")
+
+        subcat_obj = SubCategories.objects.get(id=sub_category)
+        merchant_user_obj = MerchantUser.objects.get(id=added_by_merchant)
+        product = Product(product_name=product_name, in_stock_total=in_stock_total, url_slug=url_slug, brand=brand,
+                          subcategories_id=subcat_obj, product_description=product_description,
+                          product_max_price=product_max_price, product_discount_price=product_discount_price,
+                          product_long_description=long_desc, added_by_merchant=merchant_user_obj)
+        product.save()
+
+        i = 0
+        for media_content in media_content_list:
+            fs = FileSystemStorage()
+            filename = fs.save(media_content.name, media_content)
+            media_url = fs.url(filename)
+            product_media = ProductMedia(product_id=product, media_type=media_type_list[i], media_content=media_url)
+            product_media.save()
+            i = i + 1
+
+        j = 0
+        for title_title in title_title_list:
+            product_details = ProductDetails(title=title_title, title_details=title_details_list[j], product_id=product)
+            product_details.save()
+            j = j + 1
+
+        for about in about_title_list:
+            product_about = ProductAbout(title=about, product_id=product)
+            product_about.save()
+
+        product_tags_list = product_tags.split(",")
+
+        for product_tag in product_tags_list:
+            product_tag_obj = ProductTags(product_id=product, title=product_tag)
+            product_tag_obj.save()
+
+        product_transaction = ProductTransaction(product_id=product, transaction_type=1,
+                                                 transaction_product_count=in_stock_total,
+                                                 transaction_description="Intially Item Added in Stocks")
+        product_transaction.save()
+        return HttpResponse("OK")

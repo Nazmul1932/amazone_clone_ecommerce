@@ -113,7 +113,7 @@
                             <br>
                             <img style="width:70%;display:none" class="img_preview">
                             <br>
-                            <video style="width:70%;display:none" class="video_preview" controls>
+                            <video style="width:70%;display:none" class="video_preview" controls></video>
                         </div>
                     </div>
                     </div>
@@ -214,4 +214,113 @@
 {% endblock page_content %}
 
 {% block custom_js %}
+<script src="//cdn.tiny.cloud/1/u6oa5pnpaa1vxho1md7uk4zmq2ai7xuf5o5wfgyrc131vpj6/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+      selector: '#long_desc',
+      plugins: 'quickbars emoticons preview a11ychecker advcode casechange formatpainter linkchecker autolink lists media checklist media mediaembed pageembed permanentpen powerpaste table advtable tinymcespellchecker',
+      toolbar: 'quickbars emoticons preview media a11ycheck addcomment showcomments casechange checklist code formatpainter pageembed permanentpen table',
+    });
+</script>
+<script>
+    $(".add_media").click(function(){
+        var media_row=$(".first_media").clone();
+        media_row.removeClass("first_media");
+        media_row.replaceAll("src","")
+        media_row.find(".select_media").val("");
+        media_row.find(".img_preview").attr("src","").css({"border":"none"}).css({"border-radius":"0px"}).hide();
+        media_row.find(".video_preview").attr("src","").css({"border":"none"}).css({"border-radius":"0px"}).hide();
+        $(".media_div").append(media_row);
+    });
+    $(".remove_media").click(function(){
+        if($(".media_div").find(".media_div_row").length>1){
+            $(".media_div").children().last().remove();
+        }
+    });
+
+    $(".add_details").click(function(){
+        var details_row=$(".first_details").clone();
+        details_row.removeClass("first_details");
+        details_row.find(".title_title").val("");
+        details_row.find(".title_details").val("");
+        $(".details_div").append(details_row);
+    });
+    $(".remove_details").click(function(){
+        if($(".details_div").find(".details_div_row").length>1){
+            $(".details_div").children().last().remove();
+        }
+    });
+
+    $(".add_about").click(function(){
+        var about_row=$(".first_about").clone();
+        about_row.removeClass("first_about");
+        about_row.find(".about_title").val("");
+        $(".about_div").append(about_row);
+    });
+    $(".remove_about").click(function(){
+        if($(".about_div").find(".about_div_row").length>1){
+            $(".about_div").children().last().remove();
+        }
+    });
+
+    $(document).on("change",".select_media",function(){
+        var media_type=$(this).parents(".media_div_row").find(".media_type").val();
+        var img_preview=$(this).parents(".media_div_row").find(".img_preview");
+        var vid_preview=$(this).parents(".media_div_row").find(".video_preview");
+        showPreviewMedia(this,media_type,img_preview,vid_preview);
+    });
+
+    function showPreviewMedia(input,media_type,img_preview,video_preview){
+        if(input.files && input.files[0]){
+            var reader=new FileReader();
+            reader.onload=function(e){
+                if(media_type=="1"){
+                    img_preview.attr("src",e.target.result);
+                    img_preview.show();
+                    img_preview.css({"border":"5px solid orange"});
+                    img_preview.css({"border-radius":"10px"});
+                }
+                if(media_type=="2"){
+                    video_preview.show();
+                    video_preview.css({"border":"5px solid orange"});
+                    video_preview.css({"border-radius":"10px"});
+                    video_preview.attr("src",e.target.result);
+                    video_preview.load();
+                    video_preview.play();
+
+                }
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+
+    $(".submit_btn").click(function(){
+        var form=new FormData($("#myform")[0]);
+        form.append("long_desc",tinyMCE.activeEditor.getContent());
+
+        //AJAX CODE
+        var xhr=new XMLHttpRequest();
+        xhr.onreadystatechange=function(){
+            if(xhr.status==200){
+                console.log(xhr.responseText);
+            }
+        }
+        xhr.open("POST","{% url 'product_create' %}",true);
+        $("#progressbar").show();
+
+        //UPDATING PROGRESS BAR
+        xhr.upload.addEventListener("progress",function(ev){
+            if(ev.lengthComputable){
+                var percentage=(ev.loaded/ev.total*100|0);
+                $("#progressbar").css({"width":""+percentage+"%"}).text("Uploading .."+percentage+"%");
+                console.log(percentage);
+            }
+        });
+
+        xhr.send(form);
+    })
+
+</script>
+<script src="//bootstrap-tagsinput.github.io/bootstrap-tagsinput/dist/bootstrap-tagsinput.min.js"></script>
 {% endblock custom_js %}
