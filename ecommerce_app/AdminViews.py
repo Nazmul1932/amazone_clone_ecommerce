@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import ListView, CreateView, UpdateView, View
 from ecommerce_app.models import *
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.files.storage import FileSystemStorage
@@ -188,3 +188,14 @@ class MerchantUserUpdateView(SuccessMessageMixin, UpdateView):
         merchantuser.save()
         messages.success(self.request, "Merchant User Updated")
         return HttpResponseRedirect(reverse("merchant_list"))
+
+
+class ProductCreateView(View):
+    def get(self, request, *args, **kwargs):
+        categories = Categories.objects.filter(is_active=1)
+        categories_list = []
+        for category in categories:
+            sub_category = SubCategories.objects.filter(is_active=1, category_id=category.id)
+            categories_list.append({"category": category, "sub_category": sub_category})
+        merchant_users = MerchantUser.objects.filter(auth_user_id__is_active=True)
+        return render(request, "admin/product_create.html", {"categories": categories_list, "merchant_users": merchant_users})
